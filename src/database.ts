@@ -1,23 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
-import { live } from "@electric-sql/pglite/live";
-import type { PGliteWithLive } from "./types";
 
-let dbInstance: PGliteWithLive | null = null;
+let db: PGlite | null = null;
 
-export async function getDatabase(): Promise<PGliteWithLive> {
-  if (dbInstance) return dbInstance;
+export function getDatabase(): PGlite {
+  if (db) return db;
 
-  try {
-    dbInstance = new PGlite({
-      dataDir: "idb://todo-db",
-      extensions: { live },
-    }) as PGliteWithLive;
-  } catch {
-    // Fallback to in-memory if IndexedDB fails
-    dbInstance = new PGlite({
-      extensions: { live },
-    }) as PGliteWithLive;
-  }
-
-  return dbInstance;
+  db = new PGlite("idb://todo-db");
+  return db;
 }

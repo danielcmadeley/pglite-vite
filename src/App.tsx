@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
-import { PGliteProvider } from "@electric-sql/pglite-react";
 import { getDatabase } from "./database";
-import type { PGliteWithLive } from "./types";
 import TodoApp from "./TodoApp";
 import "./App.css";
 
 function App() {
-  const [db, setDb] = useState<PGliteWithLive | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    getDatabase().then(setDb);
+    // Initialize database connection
+    getDatabase();
+    setIsReady(true);
   }, []);
 
-  if (!db) {
+  if (!isReady) {
     return (
       <div className="loading">
         <h2>🚀 Starting PGlite...</h2>
@@ -21,11 +21,7 @@ function App() {
     );
   }
 
-  return (
-    <PGliteProvider db={db}>
-      <TodoApp />
-    </PGliteProvider>
-  );
+  return <TodoApp />;
 }
 
 export default App;

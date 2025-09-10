@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
-import { usePGlite } from "@electric-sql/pglite-react";
+import { getDatabase } from "./database";
 import type { Todo } from "./types";
 
 export default function TodoApp() {
-  const db = usePGlite();
   const [newTask, setNewTask] = useState("");
-  const [isInitialized, setIsInitialized] = useState(false);
   const [todos, setTodos] = useState<Todo[]>([]);
+  const db = getDatabase();
 
-  // Initialize database schema and live query
+  const loadTodos = async () => {
+    const result = await db.query(
+      "SELECT * FROM todos ORDER BY created_at DESC",
+    );
+    setTodos(result.rows as Todo[]);
+  };
+
   useEffect(() => {
     const initDB = async () => {
       await db.exec(`
@@ -19,65 +24,39 @@ export default function TodoApp() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-
-      const liveQuery = await db.live.query(
-        "SELECT * FROM todos ORDER BY created_at DESC",
-        [],
-        (results) => setTodos(results.rows as Todo[]),
-      );
-
-      setTodos(liveQuery.initialResults.rows as Todo[]);
-      setIsInitialized(true);
-
-      return () => liveQuery.unsubscribe();
+      await loadTodos();
     };
 
-    const cleanup = initDB();
-    return () => {
-      cleanup.then((cleanupFn) => cleanupFn?.());
-    };
-  }, [db]);
+    initDB();
+  }, []);
 
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.trim()) return;
 
-    try {
-      await db.query("INSERT INTO todos (task) VALUES ($1)", [newTask.trim()]);
-      setNewTask("");
-    } catch (error) {
-      console.error("Failed to add todo:", error);
-    }
+    await db.query("INSERT INTO todos (task) VALUES ($1)", [newTask.trim()]);
+    setNewTask("");
+    await loadTodos();
   };
 
   const toggleTodo = async (id: number, currentDone: boolean) => {
-    try {
-      await db.query("UPDATE todos SET done = $1 WHERE id = $2", [
-        !currentDone,
-        id,
-      ]);
-    } catch (error) {
-      console.error("Failed to toggle todo:", error);
-    }
+    await db.query("UPDATE todos SET done = $1 WHERE id = $2", [
+      !currentDone,
+      id,
+    ]);
+    await loadTodos();
   };
 
   const deleteTodo = async (id: number) => {
-    try {
-      await db.query("DELETE FROM todos WHERE id = $1", [id]);
-    } catch (error) {
-      console.error("Failed to delete todo:", error);
-    }
+    await db.query("DELETE FROM todos WHERE id = $1", [id]);
+    await loadTodos();
   };
-
-  if (!isInitialized) {
-    return <div className="loading">Initializing database...</div>;
-  }
 
   return (
     <div className="todo-app">
       <header>
         <h1>📝 Todo App</h1>
-        <p>Simple offline todo app powered by PGlite</p>
+        <p>Simple offline todo app powered by PGLite</p>
       </header>
 
       <form onSubmit={addTodo} className="add-todo-form">
