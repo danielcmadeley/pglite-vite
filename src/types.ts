@@ -3,4 +3,5 @@ export interface Todo {
   task: string;
   done: boolean;
   created_at: string;
+  user_id: string;
 }
